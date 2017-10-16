@@ -46,13 +46,17 @@ Mat Disparity::FindDisparity(bool subpixel, bool occlusion, CostType ct){
 
     for(int r = 0; r < rows; r++){
         for(int c = 0; c < cols; c++){
-           int base_dis = (int)left_disp.at<float>(r,c);
-           if(c-base_dis < 0){
+           float base_disf = left_disp.at<float>(r,c);
+           int base_dis1 = (int)base_disf;
+           int base_dis2 = base_dis1 + 1;
+           if(c-base_dis2 < 0){
                left_disp.at<float>(r,c) = 0.0f;
                continue;
            }
-           float back_dis = right_disp.at<float>(r,c-base_dis);
-           float val = abs(back_dis-base_dis);
+           float back_dis1 = right_disp.at<float>(r,c-base_dis1);
+           float back_dis2 = right_disp.at<float>(r,c-base_dis2);
+           float back_disf = (base_dis2 - base_disf)*back_dis2 + (base_disf - base_dis1) * back_dis1;
+           float val = abs(base_disf - back_disf);
            if(val > threshold){
                left_disp.at<float>(r,c) = 0.0f;
            }
@@ -65,6 +69,9 @@ Mat Disparity::FindDisparity(bool subpixel, bool occlusion, CostType ct){
  * loaded into the class instance. Provided single-direction block matching
  * result
  * subpixel: if generated disparity need sub-pixel accuracy
+ *           given three points (left, middle, right) points of parabola, x as
+ *           disparity value in pixel, y as cost value, find the point (x value)
+ *           on the parabola where y is the minimum
  * ct: specify the algorithm for cost function, default is SSD
  * direct: when do block matching, which direction to search
  *         if Left: based on left image, search blocks on left-ward on right image
@@ -140,6 +147,7 @@ Mat Disparity::FindDisparityRaw(bool sub_pixel, CostType ct, Direction direct){
                             FuncSelector(ct,y1,patch1,patch_left);
                             FuncSelector(ct,y3,patch1,patch_right);
                             //distance -= sign*0.5*(costl - costr)/(costl - 2 * cost + costr);
+
                             float y2 = cost;
                             float x2 = distance;
                             float x1 = distance + sign*1;
