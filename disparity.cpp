@@ -309,7 +309,7 @@ Mat Disparity::NormalizeRaw(Mat raw){
     Mat rt(rows, cols, CV_8UC1);
     for(int r = 0; r < rows; r++){
         for(int c = 0; c < cols; c++){
-            rt.at<uchar>(r,c) = (int)((raw.at<float>(r,c)/(float)max_range)*255);
+            rt.at<uchar>(r,c) = (int)((raw.at<float>(r,c)/(float)max_range)*256);
 
         }
     }
