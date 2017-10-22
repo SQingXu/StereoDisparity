@@ -5,14 +5,15 @@ using namespace cv;
 char filename[] = "im2.png";
 char dir[] = "/playpen/teddy";
 char path[30];
-int filter_size = 3;
+int filter_size = 19;
+int sigma = 3;
 __global__
 void blur_filter(uchar* orig, uchar* blur, int* fsize){
     int rows = gridDim.x;
     int cols = blockDim.x;
     int r = *fsize/2;
     int current_pos = blockIdx.x * cols + threadIdx.x;
-    if((int)blockIdx.x - r < 0 || blockIdx.x + 1 >= rows || (int)threadIdx.x - r < 0 || threadIdx.x + 1 >= cols){
+    if((int)blockIdx.x - r < 0 || blockIdx.x + r >= rows || (int)threadIdx.x - r < 0 || threadIdx.x + r >= cols){
         blur[current_pos] = 0;
     }else{
         int total = 0;
@@ -22,6 +23,26 @@ void blur_filter(uchar* orig, uchar* blur, int* fsize){
             }
         }
         blur[current_pos] = (uchar)(total/(float)(*fsize * *fsize));
+    }
+}
+
+__global__
+void gaussian_filter(uchar* orig, uchar* g_res, int* sigma, int* fsize){
+    int rows = gridDim.x;
+    int cols = blockDim.x;
+    int r = *fsize/2;
+    int cpos = blockIdx.x * cols + threadIdx.x;
+    if((int)blockIdx.x - r < 0 || blockIdx.x + r >= rows || (int)threadIdx.x - r < 0 || threadIdx.x + r >= cols){
+        g_res[cpos] = 0;
+    }else{
+        int g_val = 0;
+        for(int i = -r; i < r+1 ; i++){
+            for(int j = -r; j < r+1; j++){
+                float gc = (1/(2*3.1415926*(*sigma)*(*sigma)))*expf(-1*(i*i+j*j)/((float)2*(*sigma)*(*sigma)));
+                g_val += (gc * orig[cpos + i*cols + j]);
+            }
+        }
+        g_res[cpos] = (uchar)g_val;
     }
 }
 
@@ -86,8 +107,9 @@ int main(void){
 //    cudaMalloc((void **) &d_b, size);
 //    cudaMalloc((void **) &d_c, size);
     uchar* d_orig;
-    uchar* d_res, *res;
+    uchar* d_res, *res, * d_gres;
     int* d_fsize;
+    int* d_sigma;
 
     sprintf(path, "%s/%s", dir, filename);
     Mat img = imread(path, CV_LOAD_IMAGE_GRAYSCALE);
@@ -101,29 +123,37 @@ int main(void){
 
     int size = img_dim * sizeof(uchar);
     //initialization
+    cudaMalloc((void **) &d_sigma, sizeof(int));
     cudaMalloc((void **) &d_fsize, sizeof(int));
     cudaMalloc((void **) &d_orig, size);
     cudaMalloc((void **) &d_res, size);
+    cudaMalloc((void **) &d_gres, size);
     res = (uchar*)malloc(size);
 
     DFS_CUDA_ASSERT(cudaMemcpy(d_fsize, &filter_size, sizeof(int), cudaMemcpyHostToDevice));
+    DFS_CUDA_ASSERT(cudaMemcpy(d_sigma, &sigma,sizeof(int),cudaMemcpyHostToDevice));
     DFS_CUDA_ASSERT(cudaMemcpy(d_orig, img.data, size, cudaMemcpyHostToDevice));
     //blur_filter<<<rows, cols>>>(d_orig, d_res, d_fsize);
-    edge_detector<<<rows, cols>>>(d_orig,d_res);
+
+    gaussian_filter<<<rows,cols>>>(d_orig,d_gres,d_sigma,d_fsize);
+    edge_detector<<<rows, cols>>>(d_gres,d_res);
 
     DFS_CUDA_ASSERT(cudaPeekAtLastError());
     DFS_CUDA_ASSERT(cudaMemcpy(res, d_res, size, cudaMemcpyDeviceToHost));
 
+    DFS_CUDA_ASSERT(cudaFree(d_fsize));
+    DFS_CUDA_ASSERT(cudaFree(d_sigma));
+    DFS_CUDA_ASSERT(cudaFree(d_gres));
     DFS_CUDA_ASSERT(cudaFree(d_orig));
     DFS_CUDA_ASSERT(cudaFree(d_res));
 
 
     Mat output(rows,cols,CV_8UC1,res);
-    imwrite("EdgeDetector.png", output);
+    imwrite("Guassian3&Edges.png", output);
     namedWindow("Original", WINDOW_AUTOSIZE );
     imshow("Original",img);
-    namedWindow("Blurred", WINDOW_AUTOSIZE );
-    imshow("Blurred",output);
+    namedWindow("Gaussian", WINDOW_AUTOSIZE );
+    imshow("Gaussian",output);
     waitKey(0);
     free(res);
 
