@@ -67,6 +67,10 @@ bool Camera::readCalibration(char *filename)
 
 bool Camera::projectPt(Mat point_3d, Mat& pixel_cord)
 {
+    if(pixel_cord.cols != 1 || pixel_cord.rows != 2 || point_3d.cols != 1 || point_3d.rows != 3 || !point_3d.data){
+        printf("error: invalid inputs\n");
+        return false;
+    }
     //3D to 2D
     Mat homo_pt(4,1, CV_32FC1);
     homo_pt.at<float>(0,0) = point_3d.at<float>(0,0);
@@ -80,18 +84,23 @@ bool Camera::projectPt(Mat point_3d, Mat& pixel_cord)
     normal_pt.at<float>(0,0) = homo_pt.at<float>(0,0)/z;
     normal_pt.at<float>(1,0) = homo_pt.at<float>(1,0)/z;
     normal_pt.at<float>(2,0) = 1;
-    printf("before distort: %5f, %5f, %5f\n",normal_pt.at<float>(0,0), normal_pt.at<float>(1,0), normal_pt.at<float>(2,0));
+    //printf("before distort: %5f, %5f, %5f\n",normal_pt.at<float>(0,0), normal_pt.at<float>(1,0), normal_pt.at<float>(2,0));
     distortPt(normal_pt, normal_pt);
-    printf("distort: %5f, %5f, %5f\n",normal_pt.at<float>(0,0), normal_pt.at<float>(1,0), normal_pt.at<float>(2,0));
+
     normal_pt = K * normal_pt;
 
     pixel_cord.at<float>(0,0) = normal_pt.at<float>(0,0);
     pixel_cord.at<float>(1,0) = normal_pt.at<float>(1,0);
+    //printf("after projection: %5f, %5f\n",pixel_cord.at<float>(0,0), pixel_cord.at<float>(1,0));
     return true;
 }
 
 bool Camera::unprojectPt(Mat pixel_cord, Mat& point_3d, float depth)
 {
+    if(pixel_cord.cols != 1 || pixel_cord.rows != 2 || point_3d.cols != 1 || point_3d.rows != 3 || !pixel_cord.data){
+        printf("error: invalid inputs\n");
+        return false;
+    }
     //2D to 3D
     undistortPt(pixel_cord, point_3d);
     Mat homo_pt(4,1, CV_32FC1);
@@ -114,6 +123,9 @@ bool Camera::unprojectPt(Mat pixel_cord, Mat& point_3d, float depth)
 bool Camera::distortPt(Mat orig, Mat& dis)
 {
     //2D to 2D
+    if(orig.cols != 1 || orig.rows != 2 || dis.cols != 1 || dis.rows != 2 || !orig.data){
+        return false;
+    }
     float u = orig.at<float>(0,0);
     float v = orig.at<float>(1,0);
     float r_sqr = u * u + v * v;

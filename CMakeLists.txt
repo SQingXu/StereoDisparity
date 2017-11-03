@@ -4,11 +4,18 @@ project("StereoDisparity")
 find_package(OpenCV REQUIRED)
 find_package(CUDA REQUIRED)
 
+find_package(OpenMP)
+if (OPENMP_FOUND)
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 set(
 CUDA_NVCC_FLAGS
 ${CUDA_NVCC_FLAGS};
 -O3 -gencode arch=compute_52,code=sm_52
 )
+
 
 
 cuda_add_executable(RectifiedDisparity cuda_test.cu)
