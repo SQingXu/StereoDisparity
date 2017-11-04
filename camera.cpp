@@ -65,6 +65,24 @@ bool Camera::readCalibration(char *filename)
     return true;
 }
 
+bool Camera::worldToCamPt(Mat point_w, Mat& point_c){
+    if(point_w.cols != 1 || point_w.rows != 3 || point_c.cols != 1 || point_c.rows != 3 || !point_w.data){
+        printf("error: invalid inputs\n");
+        return false;
+    }
+    //3D to 3D
+    Mat homo_pt(4,1, CV_32FC1);
+    homo_pt.at<float>(0,0) = point_w.at<float>(0,0);
+    homo_pt.at<float>(1,0) = point_w.at<float>(1,0);
+    homo_pt.at<float>(2,0) = point_w.at<float>(2,0);
+    homo_pt.at<float>(3,0) = 1;
+    homo_pt = E * homo_pt;
+    point_c.at<float>(0,0) = homo_pt.at<float>(0,0);//x
+    point_c.at<float>(1,0) = homo_pt.at<float>(1,0);//y
+    point_c.at<float>(2,0) = homo_pt.at<float>(2,0);//z
+    return true;
+}
+
 bool Camera::projectPt(Mat point_3d, Mat& pixel_cord)
 {
     if(pixel_cord.cols != 1 || pixel_cord.rows != 2 || point_3d.cols != 1 || point_3d.rows != 3 || !point_3d.data){

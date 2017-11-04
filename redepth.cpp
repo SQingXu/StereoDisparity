@@ -29,8 +29,68 @@ bool ReverseDepth::ReadImagePair(char *file1, char *file2, char* calib1, char* c
 }
 
 Mat ReverseDepth::FindDepth(bool subpixel, bool occlusion, CostType ct){
-    Mat raw = FindDepthRaw(subpixel, ct, OneToTwo);
-    return NormalizeRaw(raw);
+    if(!occlusion){
+        Mat raw = FindDepthRaw(subpixel, ct, TwoToOne);
+        return NormalizeRaw(raw);
+    }
+    Mat raw_12 = FindDepthRaw(subpixel,ct,OneToTwo);
+    Mat raw_21 = FindDepthRaw(subpixel,ct,TwoToOne);
+    float threshold = 5.0f;
+    int rows = raw_12.rows;
+    int cols = raw_12.cols;
+    float step = (1/range_min - 1/range_max)/(float)max_iteration;
+#pragma omp parallel for
+    for(int r = 0; r < rows; r++){
+        for(int c = 0; c < cols; c++){
+            float base_depth = raw_12.at<float>(r,c);
+            //with given depth project this point onto depth map 2
+            Mat pixel_cord1(2,1,CV_32FC1);
+            Mat pixel_cord2(2,1,CV_32FC1);
+            Mat point_3d(3,1,CV_32FC1);
+            Mat point_c2(3,1,CV_32FC1);
+            pixel_cord1.at<float>(0,0) = (float)c;//x
+            pixel_cord1.at<float>(1,0) = (float)r;//y
+            if(!c1.unprojectPt(pixel_cord1,point_3d,base_depth)){
+                continue;
+            }
+            if(!c2.projectPt(point_3d, pixel_cord2)){
+                continue;
+            }
+            c2.worldToCamPt(point_3d,point_c2);
+            float x_f = pixel_cord2.at<float>(0,0);
+            float y_f = pixel_cord2.at<float>(1,0);
+            if(x_f < 0 || x_f >= cols-1 || y_f < 0 || y_f >= rows-1){
+                raw_12.at<float>(r,c) = 0.0f;
+                continue;
+            }
+            int x1 = (int)x_f;
+            int x2 = ((int)x_f) + 1;
+            int y1 = (int)y_f;
+            int y2 = ((int)y_f) + 1;
+            if(x1 < 0 || x2 < 0 || y1 < 0 || y2 < 0){
+                printf("xf: %5f, x1: %d, x2: %d, y1: %d, y2: %d\n",x_f,x1, x2, y1, y2);
+                raw_12.at<float>(r,c) = 0.0f;
+                continue;
+            }
+            float v11 = raw_21.at<float>(y1,x1);
+            float v21 = raw_21.at<float>(y1,x2);
+            float v12 = raw_21.at<float>(y2,x1);
+            float v22 = raw_21.at<float>(y2,x2);
+            float x1_p = ((float)x2 - x_f)/(x2 - x1);
+            float x2_p = ((float)x_f - x1)/(x2 - x1);
+            float y1_p = ((float)y2 - y_f)/(y2 - y1);
+            float y2_p = ((float)y_f - y1)/(y2 - y1);
+            float back_depth = (y1_p*(x1_p*v11 + x2_p*v21) + y2_p*(x1_p*v12 + x2_p*v22));
+
+            float val = abs((float)1/point_c2.at<float>(2,0) - (float)1/back_depth)/step;
+            if(val > threshold){
+                raw_12.at<float>(r,c) = 0.0f;
+            }
+        }
+    }
+    return NormalizeRaw(raw_12);
+
+
 }
 
 void ReverseDepth::SetRange(float min, float max){
@@ -65,7 +125,7 @@ Mat ReverseDepth::FindDepthRaw(bool subpixel, CostType ct, Direction direct){
     Mat disparity(rows, cols, CV_32FC1);
     float step = (1/range_min - 1/range_max)/(float)range;
     float base = 1/range_min;
-//#pragma omp parallel for
+#pragma omp parallel for
     for(int y = 0; y < rows; y++){
         for(int x = 0; x < cols; x++){
             float min_cost = INT_MAX;
@@ -90,43 +150,68 @@ Mat ReverseDepth::FindDepthRaw(bool subpixel, CostType ct, Direction direct){
             in.at<float>(1,0) = (float)y;
             Mat mid(3,1,CV_32FC1);
             Mat res(2,1,CV_32FC1);
+            float y1 = 0, y2 = 0, y3 = 0;
+            float pre_cost = 0;
+            float best_i = 0;
+            bool find_min= false;
             for(int i = 0; i < range; i++){
                 float depth = 1/(base - i * step);
                 //printf("depth: %5f, step: %5f\n",depth, step);
                 //first project point from img1 to img2
 
 
-                cam1.unprojectPt(in,mid, depth);
-                cam2.projectPt(mid,res);
-                //patch2.at<uchar>(0,0) = 0;
-                //printf("x: %5f, y: %5f\n",res.at<float>(0,0), res.at<float>(1,0));
-                //Mat patch2 = GetBilinearPatch(res.at<float>(0,0), res.at<float>(1,0),width_left, width_right,height_up,height_down,img2);
+                if(!cam1.unprojectPt(in,mid, depth)){
+                    continue;
+                }
+                if(!cam2.projectPt(mid,res)){
+                    continue;
+                }
                 GetBilinearPatch(res.at<float>(0,0), res.at<float>(1,0),width_left, width_right,height_up,height_down,img2,patch2);
                 if(patch2.empty()){
                     continue;
                 }
-//                printf("patch1 rows: %d, cols: %d\npatch2 rows: %d, cols: %d\n", patch1.rows, patch1.cols, patch2.rows, patch2.cols);
-//                for(int y_sub = 0; y_sub < patch2.rows; y_sub++){
-//                    for(int x_sub = 0; x_sub < patch2.cols; x_sub++){
-//                        if(x_sub == patch2.cols - 1){
-//                            printf("%d\n", patch2.at<uchar>(y_sub,x_sub));
-//                        }else{
-//                            printf("%d ", patch2.at<uchar>(y_sub,x_sub));
-//                        }
-//                    }
-//                }
+
                 float cost;
                 FuncSelector(ct, cost, patch1, patch2);
 
-                if(cost < min_cost){
-                    min_cost = cost;
-                    best_depth = depth;
+                if(subpixel){
+                    if(find_min){
+                        y3 = cost;
+                        find_min = false;
+                    }
+                    if(cost < min_cost){
+                        min_cost = cost;
+                        //best_depth = depth;
+                        y1 = pre_cost;
+                        best_i = (float)i;
+                        find_min = true;
+                    }
+                    //update previous cost only at the end of the loop
+                    pre_cost = cost;
+                }else{
+                    if(cost < min_cost){
+                        min_cost = cost;
+                        best_depth = depth;
+                    }
                 }
 
-
+            }
+            if(subpixel){
+                if(best_i != 0 && best_i != range-1){
+                    y2 = min_cost;
+                    float x1 = (float)(best_i - 1);
+                    float x2 = (float)best_i;
+                    float x3 = (float)(best_i + 1);
+                    float a = (((y2-y1)/(x2-x1))-((y3-y2)/(x3-x2)))/(x1-x3);
+                    float b = (y2-y1)/(x2-x1)- a *(x2+x1);
+                    float c = y2 - (x2*x2*a) - (b * x2);
+                    float new_i = -b/(2*a);
+                    //min_cost = (new_i*new_i*a) + (new_i*b) + c;
+                    best_depth = 1/(base - new_i * step);
+                }
             }
             disparity.at<float>(y,x) = best_depth;
-            printf("x: %d y: %d depth: %5f\n",x,y,best_depth);
+            //printf("x: %d y: %d depth: %5f\n",x,y,best_depth);
 
         }
     }
@@ -276,8 +361,12 @@ Mat ReverseDepth::NormalizeRaw(Mat raw){
     Mat rt(rows, cols, CV_8UC1);
     for(int r = 0; r < rows; r++){
         for(int c = 0; c < cols; c++){
-            rt.at<uchar>(r,c) = (int)((raw.at<float>(r,c)/range_max)*256);
-
+            float val = raw.at<float>(r,c);
+            if(val <= 0.0){
+                rt.at<uchar>(r,c) = 0;
+                continue;
+            }
+            rt.at<uchar>(r,c) = (int)((val/range_max)*256);
         }
     }
     return rt;
@@ -302,10 +391,10 @@ bool ReverseDepth::GetBilinearPatch(float x, float y, int w_l, int w_r, int h_u,
             int v21 = img.at<uchar>(y1,x2);
             int v12 = img.at<uchar>(y2,x1);
             int v22 = img.at<uchar>(y2,x2);
-            float x2_p = ((float)x2 - x_f)/(x2 - x1);
-            float x1_p = ((float)x_f - x1)/(x2 - x1);
-            float y2_p = ((float)y2 - y_f)/(y2 - y1);
-            float y1_p = ((float)y_f - y1)/(y2 - y1);
+            float x1_p = ((float)x2 - x_f)/(x2 - x1);
+            float x2_p = ((float)x_f - x1)/(x2 - x1);
+            float y1_p = ((float)y2 - y_f)/(y2 - y1);
+            float y2_p = ((float)y_f - y1)/(y2 - y1);
             int v = (int)(y1_p*(x1_p*v11 + x2_p*v21) + y2_p*(x1_p*v12 + x2_p*v22));
             patch.at<uchar>(p_y, p_x) = v;
             p_x = (p_x == (w_l+w_r))?0:p_x+1;

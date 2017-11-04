@@ -19,10 +19,10 @@ int main(void)
 //    printf("result: %10f %10f\n",points.at<float>(0,0), points.at<float>(1,0));
     printf("Test\n");
     ReverseDepth rd = ReverseDepth();
-    rd.SetRange(50,120);
+    rd.SetRange(50,100);
     rd.ReadImagePair(img1, img2, filename1, filename2);
-    Mat depth = rd.FindDepth(false, false, ZNCC);
-    //imwrite("ncc_output.jpg",depth);
+    Mat depth = rd.FindDepth(true, true, ZNCC);
+    imwrite("zncc_output.jpg",depth);
     namedWindow("Test Window", WINDOW_AUTOSIZE );
     imshow("Test Window",depth);
     waitKey(0);

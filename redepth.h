@@ -18,7 +18,7 @@ enum Direction{OneToTwo, TwoToOne};
 
 class ReverseDepth{
 public:
-    const static int patch_size = 7;
+    const static int patch_size = 11;
     const static int max_iteration = 64;
 
     bool ReadImagePair(char* file1, char* file2, char* calib1, char* calib2);
@@ -38,5 +38,5 @@ private:
     float OneSubZNCCOfPatches(Mat patch1, Mat patch2);
     void FuncSelector(CostType ct, float& cost, Mat patch1, Mat patch2);
     Mat NormalizeRaw(Mat raw);
-    void GetBilinearPatch(float x, float y, int w_l, int w_r, int h_u, int h_d, Mat img, Mat& patch);
+    bool GetBilinearPatch(float x, float y, int w_l, int w_r, int h_u, int h_d, Mat img, Mat& patch);
 };

@@ -19,6 +19,7 @@ public:
     bool readCalibration(char* filename);
     bool projectPt(Mat point_3d, Mat& pixel_cord);
     bool unprojectPt(Mat pixel_cord, Mat& point_3d,float depth);
+    bool worldToCamPt(Mat point_w, Mat& point_c);
     bool distortPt(Mat orig, Mat& dist);
     bool undistortPt(Mat dist, Mat& orig);
 
