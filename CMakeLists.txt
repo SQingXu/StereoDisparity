@@ -51,6 +51,7 @@ target_sources(FrameExtracter PUBLIC dfsv.cpp dfsv.h)
 add_executable(FramePlayer mainplayer.cpp)
 target_sources(FramePlayer PUBLIC flycaptureplayer.cpp flycaptureplayer.h)
 target_sources(FramePlayer PUBLIC DFSVPlayer.cpp DFSVPlayer.h)
+target_sources(FramePlayer PUBLIC Calibrator.cpp Calibrator.h)
 
 target_link_libraries(RectifiedDisparity ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw)
 target_link_libraries(ProjectionStereo ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw)
