@@ -168,6 +168,7 @@ void FlyCapturePlayer::StartRecord(String out_path){
     image_buffer_size.resize(num_streams);
     image_meta_buffer_size.resize(num_streams);
     out_file.write((char *)&num_streams, sizeof(num_streams));
+    std::cout << "Number of streams " << num_streams << std::endl;
 
     total_size = sizeof(num_streams);
     num_frames = 0;

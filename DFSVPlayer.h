@@ -1,4 +1,5 @@
-#include "flycaptureplayer.h"
+#pragma once
+#include "StreamUtil.h"
 
 class DFSVPlayer{
 public:
@@ -8,11 +9,11 @@ public:
     void Close();
     void GrabNextFrame(vector<StreamPacket>& sp);
 
-    int GetFrameNumber(){return num_frames;}
-    int GetCurrentFrameNumber(){return current_frame;}
+    unsigned int GetFrameNumber(){return num_frames;}
+    unsigned int GetCurrentFrameNumber(){return current_frame;}
     void SetCurrentFrameNumber(unsigned int frame){current_frame = frame%num_frames;}
-    void SelectFrame(vector<StreamPacket>& sp, unsigned int frame);
-
+    unsigned int GetNumStreams(){return num_streams;}
+    StreamInfo GetStreamInfo(){return streamInfos[0];}
  private:
     size_t size_bytes;
     size_t frame_bytes;

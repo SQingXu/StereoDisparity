@@ -1,4 +1,7 @@
 #include "DFSVPlayer.h"
+#include "flycaptureplayer.h"
+#include "Calibrator.h"
+
 #include <ctime>
 #include <chrono>
 #include <unistd.h>
@@ -15,10 +18,26 @@ enum AppMode{
     PlayDFSV
 };
 
-void ShowPairImages(vector<StreamPacket> &sp, const String win_name);
+void ShowPairImages(vector<StreamPacket> &sp, const String win_name, size_t cv_fmt);
 
+/* A simple interface for either render real-time or recorded video
+ * In the Record Mode:
+ *   r: Start Recording
+ *   s: Stop Recording
+ * In the Play DFSV Mode
+ *   p: Pause/Resume the video
+ *   s: select frames for calibration
+ *   d: un-select current frame if current frame is selected
+ *   g: Go to specifeid frame number
+ *   f: Change Frame Rate to input value
+ *   t: Change Step value to input value
+ *   i: Move Backward by one step if not image for calibration, by one
+ *      one frame if image for calibration
+ *   o: Move Forward by one step if not image for calibration, by one
+ *      one frame if image for calibration
+ *   */
 int main(int argc, char *argv[]){
-    String path = "/playpen/StereoDisparity/Capture/capture1";
+    String path = "/playpen/StereoDisparity/Capture/capture1_calib";
     char keypress;
     AppMode am;
 
@@ -51,7 +70,7 @@ int main(int argc, char *argv[]){
             if(record){
                 player.WriteStreams(packets);
             }
-            ShowPairImages(packets, RECORD_WIN);
+            ShowPairImages(packets, RECORD_WIN,CV_16UC1);
 
             keypress = (cv::waitKey(1) & 0xff);
 
@@ -73,7 +92,7 @@ int main(int argc, char *argv[]){
                 }
             }
         }while(keypress != 'q');
-
+        player.Stop();
     }else{
         bool pause = false;
         bool calibration = false;
@@ -81,9 +100,11 @@ int main(int argc, char *argv[]){
         float frame_rate = 30.0;
         std::cout << "Play Video" << std::endl;
 
-        DFSVPlayer dplayer("/playpen/StereoDisparity/Capture/capture1");
+        DFSVPlayer dplayer(path);
+        Calibrator calibrator;
         dplayer.Open();
         unsigned int current_frame = 0;
+        unsigned int step = 1;
         unsigned int calib_index = 0;
         unsigned int prev_frame = 0;
         unsigned int frame_number = dplayer.GetFrameNumber();
@@ -98,7 +119,7 @@ int main(int argc, char *argv[]){
                 chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 
                 dplayer.GrabNextFrame(packets);
-                ShowPairImages(packets, PLAY_WIN);
+                ShowPairImages(packets, PLAY_WIN,dplayer.GetStreamInfo().cvfmt);
 
                 //update current frame number
                 current_frame = dplayer.GetCurrentFrameNumber();
@@ -140,7 +161,7 @@ int main(int argc, char *argv[]){
                 }
                 dplayer.SetCurrentFrameNumber(i);
                 dplayer.GrabNextFrame(packets);
-                ShowPairImages(packets, PLAY_WIN);
+                ShowPairImages(packets, PLAY_WIN,dplayer.GetStreamInfo().cvfmt);
             }
 
             //change the frame rate
@@ -154,6 +175,18 @@ int main(int argc, char *argv[]){
                 }
                 std::cout << "Current Frame Rate: " << frame_rate << std::endl;
             }
+
+            //change step
+            if(keypress == 't'){
+                unsigned int i;
+                std::cout << "Expected step: ";
+                std::cin >> i;
+                std::cout << std::endl;
+                if(i <= frame_number){
+                    step = i;
+                }
+            }
+
 
             //select frame
             if(keypress == 's' && !calibration){
@@ -189,7 +222,7 @@ int main(int argc, char *argv[]){
                 if(calibration){
                     dplayer.SetCurrentFrameNumber(selected_frames[i]);
                     dplayer.GrabNextFrame(packets);
-                    ShowPairImages(packets,SELECT_WIN);
+                    ShowPairImages(packets,SELECT_WIN,dplayer.GetStreamInfo().cvfmt);
                 }
 
             }
@@ -204,13 +237,13 @@ int main(int argc, char *argv[]){
                         prev_frame = dplayer.GetCurrentFrameNumber();
                         dplayer.SetCurrentFrameNumber(selected_frames[calib_index]);
                         dplayer.GrabNextFrame(packets);
-                        ShowPairImages(packets,SELECT_WIN);
+                        ShowPairImages(packets,SELECT_WIN,dplayer.GetStreamInfo().cvfmt);
                     }
                 }else{
                     calibration = false;
                     dplayer.SetCurrentFrameNumber(prev_frame);
                     dplayer.GrabNextFrame(packets);
-                    ShowPairImages(packets,PLAY_WIN);
+                    ShowPairImages(packets,PLAY_WIN,dplayer.GetStreamInfo().cvfmt);
                 }
             }
             //move forward in frame
@@ -219,9 +252,14 @@ int main(int argc, char *argv[]){
                     calib_index = (calib_index + 1)%selected_frames.size();
                     dplayer.SetCurrentFrameNumber(selected_frames[calib_index]);
                     dplayer.GrabNextFrame(packets);
-                    ShowPairImages(packets,SELECT_WIN);
+                    ShowPairImages(packets,SELECT_WIN,dplayer.GetStreamInfo().cvfmt);
                 }else{
-
+                    if(pause){
+                        unsigned int current_frame = dplayer.GetCurrentFrameNumber();
+                        dplayer.SetCurrentFrameNumber((current_frame + step)%frame_number);
+                        dplayer.GrabNextFrame(packets);
+                        ShowPairImages(packets,PLAY_WIN,dplayer.GetStreamInfo().cvfmt);
+                    }
                 }
             }
             //move backward in frame
@@ -230,25 +268,42 @@ int main(int argc, char *argv[]){
                     calib_index =(calib_index == 0)?(selected_frames.size()-1):(calib_index - 1)%selected_frames.size();
                     dplayer.SetCurrentFrameNumber(selected_frames[calib_index]);
                     dplayer.GrabNextFrame(packets);
-                    ShowPairImages(packets,SELECT_WIN);
+                    ShowPairImages(packets,SELECT_WIN,dplayer.GetStreamInfo().cvfmt);
                 }else{
+                    if(pause){
+                        unsigned int current_frame = dplayer.GetCurrentFrameNumber();
+                        dplayer.SetCurrentFrameNumber((current_frame - step)%frame_number);
+                        dplayer.GrabNextFrame(packets);
+                        ShowPairImages(packets,PLAY_WIN,dplayer.GetStreamInfo().cvfmt);
+                    }
 
+                }
+            }
+            if(keypress == 'x'){
+                if(calibration){
+                    Size boardSize;
+                    boardSize.width = 7;
+                    boardSize.height = 6;
+                    calibrator.LoadCalibInfo(boardSize,4.0,path,selected_frames);
+                    calibrator.IntrisicCalibration();
+                    calibrator.StereoExtrinsicCalibration();
+                    calibrator.SaveCalibration();
                 }
             }
 
 
         }while(keypress != 'q');
-
+        dplayer.Close();
     }
     return 0;
 }
-void ShowPairImages(vector<StreamPacket>& sp, const String win_name){
+void ShowPairImages(vector<StreamPacket>& sp, const String win_name, size_t cv_fmt){
     std::array<cv::Mat,2> raw_images = {
         sp[0].image_buffer,
         sp[1].image_buffer
     };
     // concatenate for display purposes
-    cv::Mat image_pair(raw_images[0].rows, 2 * raw_images[0].cols, CV_16UC1);
+    cv::Mat image_pair(raw_images[0].rows, 2 * raw_images[0].cols, cv_fmt);
     cv::hconcat(raw_images[1], raw_images[0], image_pair);
     //std::cout << raw_images[0].rows << " " << raw_images[1].cols << std::endl;
 

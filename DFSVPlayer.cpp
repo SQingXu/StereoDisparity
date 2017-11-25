@@ -82,18 +82,3 @@ void DFSVPlayer::GrabNextFrame(vector<StreamPacket> &sp){
 void DFSVPlayer::Close(){
     in_file.close();
 }
-
-void DFSVPlayer::SelectFrame(vector<StreamPacket> &sp, unsigned int frame){
-    int selected_frame = frame%num_frames;
-
-    //put the file read pointer to the start of current frame
-    in_file.seekg(0);
-    in_file.seekg(header_bytes + (selected_frame * frame_bytes), in_file.beg);
-
-    for(unsigned int i = 0; i < num_streams; i++){
-        in_file.read((char *)&streamPackets[i].image_buffer.data, image_buffer_bytes);
-        in_file.read((char *)&streamPackets[i].tStamp.microSeconds, sizeof(size_t));
-        streamPackets[i].tStamp.seconds = (double)streamPackets[i].tStamp.microSeconds * 1e-6;
-        sp[i].CopyFrom(streamPackets[i]);
-    }
-}

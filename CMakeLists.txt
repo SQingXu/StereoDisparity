@@ -49,6 +49,7 @@ add_executable(FrameExtracter imggenerator.cpp)
 target_sources(FrameExtracter PUBLIC dfsv.cpp dfsv.h)
 
 add_executable(FramePlayer mainplayer.cpp)
+target_sources(FramePlayer PUBLIC StreamUtil.h)
 target_sources(FramePlayer PUBLIC flycaptureplayer.cpp flycaptureplayer.h)
 target_sources(FramePlayer PUBLIC DFSVPlayer.cpp DFSVPlayer.h)
 target_sources(FramePlayer PUBLIC Calibrator.cpp Calibrator.h)
