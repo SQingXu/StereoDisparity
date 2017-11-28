@@ -68,7 +68,7 @@ Mat ReverseDepth::FindDepth(bool subpixel, bool occlusion, CostType ct){
             int y1 = (int)y_f;
             int y2 = ((int)y_f) + 1;
             if(x1 < 0 || x2 < 0 || y1 < 0 || y2 < 0){
-                printf("xf: %5f, x1: %d, x2: %d, y1: %d, y2: %d\n",x_f,x1, x2, y1, y2);
+                //printf("xf: %5f, x1: %d, x2: %d, y1: %d, y2: %d\n",x_f,x1, x2, y1, y2);
                 raw_12.at<float>(r,c) = 0.0f;
                 continue;
             }
@@ -88,6 +88,8 @@ Mat ReverseDepth::FindDepth(bool subpixel, bool occlusion, CostType ct){
             }
         }
     }
+    PLYConverter ply_converter;
+    ply_converter.writeDepthToPLY("/playpen/StereoDisparity/Capture/output_nosub.ply",raw_12,c1);
     return NormalizeRaw(raw_12);
 
 

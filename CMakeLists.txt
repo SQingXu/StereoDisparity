@@ -35,8 +35,6 @@ ${CUDA_NVCC_FLAGS};
 -O3 -gencode arch=compute_52,code=sm_52
 )
 
-
-
 cuda_add_executable(RectifiedDisparity cuda_test.cu)
 target_sources(RectifiedDisparity PUBLIC main.cpp cuda_test.h)
 target_sources(RectifiedDisparity PUBLIC disparity.cpp disparity.h)
@@ -44,6 +42,8 @@ target_sources(RectifiedDisparity PUBLIC disparity.cpp disparity.h)
 add_executable(ProjectionStereo project.cpp)
 target_sources(ProjectionStereo PUBLIC camera.cpp camera.h)
 target_sources(ProjectionStereo PUBLIC redepth.cpp redepth.h)
+target_sources(ProjectionStereo PUBLIC PLYConverter.cpp PLYConverter.h)
+target_sources(ProjectionStereo PUBLIC Regularizer.cpp Regularizer.h)
 
 add_executable(FrameExtracter imggenerator.cpp)
 target_sources(FrameExtracter PUBLIC dfsv.cpp dfsv.h)

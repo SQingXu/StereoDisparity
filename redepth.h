@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "camera.h"
+#include "PLYConverter.h"
 
 using namespace cv;
 using namespace std;
