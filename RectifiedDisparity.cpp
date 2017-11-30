@@ -1,4 +1,4 @@
-#include "disparity.h"
+#include "RectifiedDisparity.h"
 typedef unsigned int u_int;
 
 /* This functions takes absolute path of one image pair

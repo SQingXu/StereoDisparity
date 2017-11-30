@@ -1,5 +1,5 @@
 #include "DFSVPlayer.h"
-#include "flycaptureplayer.h"
+#include "FlyCapturePlayer.h"
 #include "Calibrator.h"
 
 #include <ctime>

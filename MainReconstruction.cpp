@@ -1,4 +1,4 @@
-#include "redepth.h"
+#include "ProjectionDepth.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -25,6 +25,7 @@ const int reg_iteration = 15;
 
 const float range_min = 50;
 const float range_max = 100;
+
 String rtBooleanString(bool bl);
 
 int main(void)

@@ -37,20 +37,20 @@ ${CUDA_NVCC_FLAGS};
 
 cuda_add_executable(RectifiedDisparity cuda_test.cu)
 target_sources(RectifiedDisparity PUBLIC main.cpp cuda_test.h)
-target_sources(RectifiedDisparity PUBLIC disparity.cpp disparity.h)
+target_sources(RectifiedDisparity PUBLIC RectifiedDisparity.cpp RectifiedDisparity.h)
 
-add_executable(ProjectionStereo project.cpp)
-target_sources(ProjectionStereo PUBLIC camera.cpp camera.h)
-target_sources(ProjectionStereo PUBLIC redepth.cpp redepth.h)
+add_executable(ProjectionStereo MainReconstruction.cpp)
+target_sources(ProjectionStereo PUBLIC Camera.cpp Camera.h)
+target_sources(ProjectionStereo PUBLIC ProjectionDepth.cpp ProjectionDepth.h)
 target_sources(ProjectionStereo PUBLIC PLYConverter.cpp PLYConverter.h)
 target_sources(ProjectionStereo PUBLIC Regularizer.cpp Regularizer.h)
 
 add_executable(FrameExtracter imggenerator.cpp)
 target_sources(FrameExtracter PUBLIC dfsv.cpp dfsv.h)
 
-add_executable(FramePlayer mainplayer.cpp)
+add_executable(FramePlayer MainPlayer.cpp)
 target_sources(FramePlayer PUBLIC StreamUtil.h)
-target_sources(FramePlayer PUBLIC flycaptureplayer.cpp flycaptureplayer.h)
+target_sources(FramePlayer PUBLIC FlyCapturePlayer.cpp FlyCapturePlayer.h)
 target_sources(FramePlayer PUBLIC DFSVPlayer.cpp DFSVPlayer.h)
 target_sources(FramePlayer PUBLIC Calibrator.cpp Calibrator.h)
 

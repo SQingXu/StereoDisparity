@@ -1,4 +1,4 @@
-#include "redepth.h"
+#include "ProjectionDepth.h"
 
 /* This functions takes absolute path of one image pair
  * if one or two image file is not found return false

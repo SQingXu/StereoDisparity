@@ -8,7 +8,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <math.h>
-#include "camera.h"
+#include "Camera.h"
 #include "PLYConverter.h"
 #include "Regularizer.h"
 

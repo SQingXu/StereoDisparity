@@ -1,5 +1,5 @@
 
-#include "disparity.h"
+#include "RectifiedDisparity.h"
 #include "cuda_test.h"
 
 using namespace std;

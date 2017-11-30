@@ -1,4 +1,4 @@
-#include "flycaptureplayer.h"
+#include "FlyCapturePlayer.h"
 #include <stdio.h>
 
 FlyCapturePlayer::FlyCapturePlayer(){

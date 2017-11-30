@@ -6,7 +6,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <fstream>
-#include "camera.h"
+#include "Camera.h"
 
 using namespace std;
 using namespace cv;

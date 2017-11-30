@@ -1,4 +1,4 @@
-#include "camera.h"
+#include "Camera.h"
 
 bool Camera::readCalibration(char *filename)
 {
