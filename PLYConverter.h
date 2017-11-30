@@ -15,5 +15,5 @@ class PLYConverter{
 public:
     PLYConverter();
     ~PLYConverter();
-    void writeDepthToPLY(const char* path, Mat depth, Camera c);
+    void writeDepthToPLY(const char* path, Mat depth,Mat color, Camera c, bool isColor);
 };

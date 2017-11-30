@@ -4,11 +4,12 @@
  * if one or two image file is not found return false
  * else return true, which means images are read correctly
  */
-bool ReverseDepth::ReadImagePair(char *file1, char *file2, char* calib1, char* calib2){
+bool StereoDepthProjection::ReadImagePair(char *file1, char *file2, char* calib1, char* calib2){
     img_a = imread(file1, CV_LOAD_IMAGE_GRAYSCALE);
     img_b = imread(file2, CV_LOAD_IMAGE_GRAYSCALE);
+    img_color = imread(file1);
 
-    if(!img_a.data){
+    if(!img_a.data || !img_color.data){
         printf("Image %s not found\n",file1);
         return false;
     }
@@ -24,17 +25,29 @@ bool ReverseDepth::ReadImagePair(char *file1, char *file2, char* calib1, char* c
     if(!c2.readCalibration(calib2)){
         printf("Calibration file %s not found\n",calib2);
     }
-    printf("Read data successfully\n");
     return true;
 }
 
-Mat ReverseDepth::FindDepth(bool subpixel, bool occlusion, CostType ct){
+Mat StereoDepthProjection::FindDepth(bool subpixel, bool occlusion, CostType ct,
+              bool regularize, bool iteration, const float beta,
+              bool SavePly, bool isColor,const char* path)
+{
+
+
+    Regularizer rg;
+    PLYConverter converter;
+
+    if(regularize){
+        rg.Start(img_a.rows * img_a.cols);
+    }
+
     if(!occlusion){
-        Mat raw = FindDepthRaw(subpixel, ct, TwoToOne);
+        Mat raw = FindDepthRaw(subpixel, ct, TwoToOne, regularize, rg);
         return NormalizeRaw(raw);
     }
-    Mat raw_12 = FindDepthRaw(subpixel,ct,OneToTwo);
-    Mat raw_21 = FindDepthRaw(subpixel,ct,TwoToOne);
+    Mat raw_12 = FindDepthRaw(subpixel,ct,OneToTwo, regularize,rg);
+    Mat raw_21 = FindDepthRaw(subpixel,ct,TwoToOne, false,rg);
+
     float threshold = 5.0f;
     int rows = raw_12.rows;
     int cols = raw_12.cols;
@@ -88,20 +101,25 @@ Mat ReverseDepth::FindDepth(bool subpixel, bool occlusion, CostType ct){
             }
         }
     }
-    PLYConverter ply_converter;
-    ply_converter.writeDepthToPLY("/playpen/StereoDisparity/Capture/output_nosub.ply",raw_12,c1);
-    return NormalizeRaw(raw_12);
 
+    if(regularize){
+        Mat reg;
+        rg.Regularize(raw_12,reg,beta,iteration);
+        if(SavePly){
+            converter.writeDepthToPLY(path,reg,img_color,c1,isColor);
+        }
+        return reg;
+    }else{
+        if(SavePly){
+            converter.writeDepthToPLY(path,raw_12,img_color,c1,isColor);
+        }
+        return raw_12;
+    }
 
 }
 
-void ReverseDepth::SetRange(float min, float max){
-    range_max = max;
-    range_min = min;
-    return;
-}
-
-Mat ReverseDepth::FindDepthRaw(bool subpixel, CostType ct, Direction direct){
+Mat StereoDepthProjection::FindDepthRaw(bool subpixel, CostType ct, Direction direct,
+                                        bool regularize, Regularizer& rg){
     Mat img1, img2;
     Camera cam1, cam2;
     if(direct == OneToTwo){
@@ -205,9 +223,17 @@ Mat ReverseDepth::FindDepthRaw(bool subpixel, CostType ct, Direction direct){
                     float x2 = (float)best_i;
                     float x3 = (float)(best_i + 1);
                     float a = (((y2-y1)/(x2-x1))-((y3-y2)/(x3-x2)))/(x1-x3);
+                    if(regularize && (y > 0 && y < rows-1 && x > 0 && x < cols-1)){
+                        rg.LoadAlphas(y * cols + x, a);
+                    }
                     float b = (y2-y1)/(x2-x1)- a *(x2+x1);
                     float c = y2 - (x2*x2*a) - (b * x2);
-                    float new_i = -b/(2*a);
+                    float new_i;
+                    if(a == 0){
+                        new_i = best_i;
+                    }else{
+                        new_i = -b/(2*a);
+                    }
                     //min_cost = (new_i*new_i*a) + (new_i*b) + c;
                     best_depth = 1/(base - new_i * step);
                 }
@@ -225,7 +251,7 @@ Mat ReverseDepth::FindDepthRaw(bool subpixel, CostType ct, Direction direct){
  * based on the enum value given by the argument
  * Support Cost Function: SSD, NCC, ZNCC
  */
-void ReverseDepth::FuncSelector(CostType ct, float &cost, Mat patch1, Mat patch2){
+void StereoDepthProjection::FuncSelector(CostType ct, float &cost, Mat patch1, Mat patch2){
     switch(ct)
     {
     case SSD: cost = SSDOfPatches(patch1, patch2); break;
@@ -239,7 +265,7 @@ void ReverseDepth::FuncSelector(CostType ct, float &cost, Mat patch1, Mat patch2
 /* This function returns integer value of
  * sum of squared difference between image patches
  */
-float ReverseDepth::SSDOfPatches(Mat patch1, Mat patch2){
+float StereoDepthProjection::SSDOfPatches(Mat patch1, Mat patch2){
     //check for validity of data
     if(!patch1.data || !patch2.data){
         printf("Error: image patch's data is invalid\n");
@@ -268,7 +294,7 @@ float ReverseDepth::SSDOfPatches(Mat patch1, Mat patch2){
 /* This function return the one minus zero normalized cross-correlations of
  * two image patches
  */
-float ReverseDepth::OneSubZNCCOfPatches(Mat patch1, Mat patch2){
+float StereoDepthProjection::OneSubZNCCOfPatches(Mat patch1, Mat patch2){
     //check for validity of data
     if(!patch1.data || !patch2.data){
         printf("Error: image patch's data is invalid\n");
@@ -317,7 +343,7 @@ float ReverseDepth::OneSubZNCCOfPatches(Mat patch1, Mat patch2){
 /* This function return the one minus normalized cross-correlations of
  * two image patches
  */
-float ReverseDepth::OneSubNCCOfPatches(Mat patch1, Mat patch2){
+float StereoDepthProjection::OneSubNCCOfPatches(Mat patch1, Mat patch2){
     //check for validity of data
     if(!patch1.data || !patch2.data){
         printf("Error: image patch's data is invalid\n");
@@ -354,7 +380,7 @@ float ReverseDepth::OneSubNCCOfPatches(Mat patch1, Mat patch2){
 /* This function returns a uchar Mat type converted from a given
  * raw Mat type, it also normalize the pixel value to the max_range
  */
-Mat ReverseDepth::NormalizeRaw(Mat raw){
+Mat StereoDepthProjection::NormalizeRaw(Mat raw){
     if(!raw.data){
         return Mat(100,100,CV_8UC1);
     }
@@ -375,7 +401,7 @@ Mat ReverseDepth::NormalizeRaw(Mat raw){
 
 }
 
-bool ReverseDepth::GetBilinearPatch(float x, float y, int w_l, int w_r, int h_u, int h_d, Mat img,Mat& patch){
+bool StereoDepthProjection::GetBilinearPatch(float x, float y, int w_l, int w_r, int h_u, int h_d, Mat img,Mat& patch){
     if(x - w_l < 0 || x + w_r >= img.cols - 1 || y - h_u < 0 || y + h_d >= img.rows -1){
         return false;
     }

@@ -8,7 +8,8 @@ PLYConverter::~PLYConverter(){
 
 }
 
-void PLYConverter::writeDepthToPLY(const char *path, Mat depth, Camera cam){
+void PLYConverter::writeDepthToPLY(const char *path, Mat depth, Mat color,Camera cam, bool isColor){
+    Mat bgr[3];
     FILE *outPly;
     outPly = fopen(path, "w+");
     fprintf(outPly,"ply\n");
@@ -18,6 +19,12 @@ void PLYConverter::writeDepthToPLY(const char *path, Mat depth, Camera cam){
     fprintf(outPly,"property float x\n");
     fprintf(outPly,"property float y\n");
     fprintf(outPly,"property float z\n");
+    if(isColor && color.channels() == 3){
+        fprintf(outPly, "property uchar red\n");
+        fprintf(outPly, "property uchar green\n");
+        fprintf(outPly, "property uchar blue\n");
+        cv::split(color, bgr);
+    }
     fprintf(outPly,"element face %d\n",0);
     fprintf(outPly,"property list uchar int vertex_indices\n");
     fprintf(outPly,"end_header\n");
@@ -32,7 +39,13 @@ void PLYConverter::writeDepthToPLY(const char *path, Mat depth, Camera cam){
             w_v.push_back(world_cord.at<float>(0,0));
             w_v.push_back(world_cord.at<float>(1,0));
             w_v.push_back(world_cord.at<float>(2,0));
-            fprintf(outPly, "%8f %8f %8f\n",w_v[0],w_v[1], w_v[2]);
+
+            fprintf(outPly, "%8f %8f %8f",w_v[0],w_v[1], w_v[2]);
+            if(isColor && color.channels() == 3){
+                fprintf(outPly, " %d %d %d", bgr[2].at<uchar>(r,c),
+                        bgr[1].at<uchar>(r,c), bgr[0].at<uchar>(r,c));
+            }
+            fprintf(outPly, "\n");
         }
     }
     fclose(outPly);
