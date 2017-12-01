@@ -13,7 +13,7 @@ using namespace std;
 class Camera{
 public:
     int width, height;
-    bool readCalibration(char* filename);
+    bool readCalibration(const char* filename);
     bool projectPt(Mat point_3d, Mat& pixel_cord);
     bool unprojectPt(Mat pixel_cord, Mat& point_3d,float depth);
     bool worldToCamPt(Mat point_w, Mat& point_c);
@@ -27,4 +27,6 @@ private:
     Mat E, E_inv;
     Mat dist;
     float k1, k2, k3, p1, p2; //distortion coefficient
+    template <typename T>void debugPrintMatrix(Mat mat);
+
 };

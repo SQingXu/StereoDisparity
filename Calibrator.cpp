@@ -18,8 +18,8 @@ void Calibrator::LoadCalibInfo(Size boaSize, float sqrSize, String path,
 }
 
 void Calibrator::LoadImages(String path, vector<unsigned int> indexes){
-    DFSVPlayer player(path);
-    player.Open();
+    DFSVPlayer player;
+    player.Open(path);
     num_streams = player.GetNumStreams();
     stream_packets.resize(num_streams);
     cameraMatrixes.resize(num_streams);

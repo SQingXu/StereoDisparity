@@ -11,6 +11,7 @@ public:
     void IntrisicCalibration();
     void StereoExtrinsicCalibration();
     void SaveCalibration();
+    void ConvertGray16ToGray8(Mat sixteenBit, Mat& eightBit);
 private:
     vector<vector<Mat>> image_buffers;//frist dimension set of image pair
     vector<vector<vector<Point2f>>> image_points;//first dimension stream
@@ -29,7 +30,6 @@ private:
     unsigned int num_streams;
     unsigned int num_frames;
     void LoadImages(String path, vector<unsigned int> indexes);
-    void ConvertGray16ToGray8(Mat sixteenBit, Mat& eightBit);
     double computeReprojectionErrors(const vector<vector<Point3f> >& objectPoints,
                                      const vector<vector<Point2f> >& imagePoints,
                                      const vector<Mat>& rvecs, const vector<Mat>& tvecs,

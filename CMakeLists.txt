@@ -44,6 +44,8 @@ target_sources(ProjectionStereo PUBLIC Camera.cpp Camera.h)
 target_sources(ProjectionStereo PUBLIC ProjectionDepth.cpp ProjectionDepth.h)
 target_sources(ProjectionStereo PUBLIC PLYConverter.cpp PLYConverter.h)
 target_sources(ProjectionStereo PUBLIC Regularizer.cpp Regularizer.h)
+target_sources(ProjectionStereo PUBLIC DFSVPlayer.cpp DFSVPlayer.h)
+target_sources(ProjectionStereo PUBLIC StreamUtil.h)
 
 add_executable(FrameExtracter imggenerator.cpp)
 target_sources(FrameExtracter PUBLIC dfsv.cpp dfsv.h)

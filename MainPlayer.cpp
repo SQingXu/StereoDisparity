@@ -37,7 +37,7 @@ void ShowPairImages(vector<StreamPacket> &sp, const String win_name, size_t cv_f
  *      one frame if image for calibration
  *   */
 int main(int argc, char *argv[]){
-    String path = "/playpen/StereoDisparity/Capture/capture1_calib";
+    String path = "/playpen/StereoDisparity/Capture/capture1_recon";
     char keypress;
     AppMode am;
 
@@ -100,9 +100,9 @@ int main(int argc, char *argv[]){
         float frame_rate = 30.0;
         std::cout << "Play Video" << std::endl;
 
-        DFSVPlayer dplayer(path);
+        DFSVPlayer dplayer;
         Calibrator calibrator;
-        dplayer.Open();
+        dplayer.Open(path);
         unsigned int current_frame = 0;
         unsigned int step = 1;
         unsigned int calib_index = 0;

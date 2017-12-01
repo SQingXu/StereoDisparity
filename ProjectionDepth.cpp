@@ -1,5 +1,44 @@
 #include "ProjectionDepth.h"
 
+bool StereoDepthProjection::LoadCalibrations(const char* calib1, const char* calib2){
+    c1 = Camera();
+    c2 = Camera();
+    if(!c1.readCalibration(calib1)){
+        printf("Calibration file %s not found\n",calib1);
+    }
+    if(!c2.readCalibration(calib2)){
+        printf("Calibration file %s not found\n",calib2);
+    }
+    return true;
+}
+
+bool StereoDepthProjection::LoadImageDFSV(const char *file){
+    dplayer.Open(file);
+    player_ini = true;
+    return true;
+}
+
+bool StereoDepthProjection::GetFramePairDFSV(unsigned int frame){
+    if(!player_ini){
+        cout << "DFSVPlayer is not opened, unable to get frames" << endl;
+        return false;
+    }
+    vector<StreamPacket> streamPackets;
+    streamPackets.resize(2);
+    dplayer.SetCurrentFrameNumber(frame);
+    dplayer.GrabNextFrame(streamPackets);
+    img_a = streamPackets[0].image_buffer;
+    img_b = streamPackets[1].image_buffer;
+
+//    ConvertGray16ToGray8(streamPackets[0].image_buffer,img_a);
+//    ConvertGray16ToGray8(streamPackets[1].image_buffer,img_b);
+    cv::namedWindow("Test Image", WINDOW_AUTOSIZE);
+    cv::Mat image_pair(img_a.rows, 2 * img_a.cols, dplayer.GetStreamInfo().cvfmt);
+    cv::hconcat(img_a, img_b, image_pair);
+    imshow("Test Image",image_pair);
+    return true;
+}
+
 /* This functions takes absolute path of one image pair
  * if one or two image file is not found return false
  * else return true, which means images are read correctly
@@ -42,11 +81,29 @@ Mat StereoDepthProjection::FindDepth(bool subpixel, bool occlusion, CostType ct,
     }
 
     if(!occlusion){
-        Mat raw = FindDepthRaw(subpixel, ct, TwoToOne, regularize, rg);
-        return NormalizeRaw(raw);
+        Mat raw;
+        if(img_a.type() == CV_8UC1){
+            raw = FindDepthRaw<uchar>(subpixel, ct, TwoToOne, regularize, rg);
+        }else if(img_a.type() == CV_16UC1){
+            raw = FindDepthRaw<ushort>(subpixel, ct, TwoToOne, regularize, rg);
+        }else{
+            std::cout << "Invalid image format" << std::endl;
+            return Mat();
+        }
+        return raw;
     }
-    Mat raw_12 = FindDepthRaw(subpixel,ct,OneToTwo, regularize,rg);
-    Mat raw_21 = FindDepthRaw(subpixel,ct,TwoToOne, false,rg);
+    Mat raw_12, raw_21;
+    if(img_a.type() == CV_8UC1){
+        raw_12 = FindDepthRaw<uchar>(subpixel,ct,OneToTwo, regularize,rg);
+        raw_21 = FindDepthRaw<uchar>(subpixel,ct,TwoToOne, false,rg);
+    }else if(img_a.type() == CV_16UC1){
+        raw_12 = FindDepthRaw<ushort>(subpixel,ct,OneToTwo, regularize,rg);
+        raw_21 = FindDepthRaw<ushort>(subpixel,ct,TwoToOne, false,rg);
+    }else{
+        std::cout << "Invalid image format" << std::endl;
+        return Mat();
+    }
+
 
     float threshold = 5.0f;
     int rows = raw_12.rows;
@@ -118,7 +175,7 @@ Mat StereoDepthProjection::FindDepth(bool subpixel, bool occlusion, CostType ct,
 
 }
 
-Mat StereoDepthProjection::FindDepthRaw(bool subpixel, CostType ct, Direction direct,
+template <typename T> Mat StereoDepthProjection::FindDepthRaw(bool subpixel, CostType ct, Direction direct,
                                         bool regularize, Regularizer& rg){
     Mat img1, img2;
     Camera cam1, cam2;
@@ -164,7 +221,7 @@ Mat StereoDepthProjection::FindDepthRaw(bool subpixel, CostType ct, Direction di
 
             Rect rect1(left_bound, up_bound, width_left + width_right + 1, height_down + height_up + 1);
             Mat patch1(img1,rect1);
-            Mat patch2(height_down + height_up + 1, width_left + width_right + 1, CV_8UC1);
+            Mat patch2(height_down + height_up + 1, width_left + width_right + 1, img_a.type());
             Mat in(2,1,CV_32FC1);
             in.at<float>(0,0) = (float)x;
             in.at<float>(1,0) = (float)y;
@@ -186,13 +243,13 @@ Mat StereoDepthProjection::FindDepthRaw(bool subpixel, CostType ct, Direction di
                 if(!cam2.projectPt(mid,res)){
                     continue;
                 }
-                GetBilinearPatch(res.at<float>(0,0), res.at<float>(1,0),width_left, width_right,height_up,height_down,img2,patch2);
+                GetBilinearPatch<T>(res.at<float>(0,0), res.at<float>(1,0),width_left, width_right,height_up,height_down,img2,patch2);
                 if(patch2.empty()){
                     continue;
                 }
 
                 float cost;
-                FuncSelector(ct, cost, patch1, patch2);
+                FuncSelector<T>(ct, cost, patch1, patch2);
 
                 if(subpixel){
                     if(find_min){
@@ -251,13 +308,13 @@ Mat StereoDepthProjection::FindDepthRaw(bool subpixel, CostType ct, Direction di
  * based on the enum value given by the argument
  * Support Cost Function: SSD, NCC, ZNCC
  */
-void StereoDepthProjection::FuncSelector(CostType ct, float &cost, Mat patch1, Mat patch2){
+template <typename T> void StereoDepthProjection::FuncSelector(CostType ct, float &cost, Mat patch1, Mat patch2){
     switch(ct)
     {
-    case SSD: cost = SSDOfPatches(patch1, patch2); break;
-    case NCC: cost = OneSubNCCOfPatches(patch1,patch2);break;
-    case ZNCC: cost = OneSubZNCCOfPatches(patch1, patch2);break;
-    default: cost = SSDOfPatches(patch1,patch2);break;
+    case SSD: cost = SSDOfPatches<T>(patch1, patch2); break;
+    case NCC: cost = OneSubNCCOfPatches<T>(patch1,patch2);break;
+    case ZNCC: cost = OneSubZNCCOfPatches<T>(patch1, patch2);break;
+    default: cost = OneSubNCCOfPatches<T>(patch1,patch2);break;
     }
     return;
 }
@@ -265,7 +322,7 @@ void StereoDepthProjection::FuncSelector(CostType ct, float &cost, Mat patch1, M
 /* This function returns integer value of
  * sum of squared difference between image patches
  */
-float StereoDepthProjection::SSDOfPatches(Mat patch1, Mat patch2){
+template <typename T> float StereoDepthProjection::SSDOfPatches(Mat patch1, Mat patch2){
     //check for validity of data
     if(!patch1.data || !patch2.data){
         printf("Error: image patch's data is invalid\n");
@@ -282,8 +339,8 @@ float StereoDepthProjection::SSDOfPatches(Mat patch1, Mat patch2){
 
     for(int r = 0; r < rows; r++){
         for(int c = 0; c < cols; c++){
-            int p1 = patch1.at<uchar>(r,c);
-            int p2 = patch2.at<uchar>(r,c);
+            int p1 = patch1.at<T>(r,c);
+            int p2 = patch2.at<T>(r,c);
             ssd += (p1-p2) * (p1-p2);
         }
     }
@@ -294,7 +351,7 @@ float StereoDepthProjection::SSDOfPatches(Mat patch1, Mat patch2){
 /* This function return the one minus zero normalized cross-correlations of
  * two image patches
  */
-float StereoDepthProjection::OneSubZNCCOfPatches(Mat patch1, Mat patch2){
+template <typename T> float StereoDepthProjection::OneSubZNCCOfPatches(Mat patch1, Mat patch2){
     //check for validity of data
     if(!patch1.data || !patch2.data){
         printf("Error: image patch's data is invalid\n");
@@ -314,8 +371,8 @@ float StereoDepthProjection::OneSubZNCCOfPatches(Mat patch1, Mat patch2){
     int psum2 = 0;
     for(int r = 0; r < rows; r++){
         for(int c = 0; c < cols; c++){
-            psum1 += patch1.at<uchar>(r,c);\
-            psum2 += patch2.at<uchar>(r,c);
+            psum1 += patch1.at<T>(r,c);\
+            psum2 += patch2.at<T>(r,c);
         }
     }
     float pavg1 = (float)psum1/(float)(rows*cols);
@@ -327,8 +384,8 @@ float StereoDepthProjection::OneSubZNCCOfPatches(Mat patch1, Mat patch2){
     float sumofsquared2 = 0.0;
     for(int r = 0; r < rows; r++){
         for(int c = 0; c < cols; c++){
-            int p1 = patch1.at<uchar>(r,c);
-            int p2 = patch2.at<uchar>(r,c);
+            int p1 = patch1.at<T>(r,c);
+            int p2 = patch2.at<T>(r,c);
             float v1 = (float)p1-pavg1;
             float v2 = (float)p2-pavg2;
             sumofsquared1 += (v1*v1);
@@ -343,7 +400,7 @@ float StereoDepthProjection::OneSubZNCCOfPatches(Mat patch1, Mat patch2){
 /* This function return the one minus normalized cross-correlations of
  * two image patches
  */
-float StereoDepthProjection::OneSubNCCOfPatches(Mat patch1, Mat patch2){
+template <typename T> float StereoDepthProjection::OneSubNCCOfPatches(Mat patch1, Mat patch2){
     //check for validity of data
     if(!patch1.data || !patch2.data){
         printf("Error: image patch's data is invalid\n");
@@ -364,8 +421,8 @@ float StereoDepthProjection::OneSubNCCOfPatches(Mat patch1, Mat patch2){
     float sumofsquared2 = 0.0;
     for(int r = 0; r < rows; r++){
         for(int c = 0; c < cols; c++){
-            int p1 = patch1.at<uchar>(r,c);
-            int p2 = patch2.at<uchar>(r,c);
+            int p1 = patch1.at<T>(r,c);
+            int p2 = patch2.at<T>(r,c);
             float v1 = (float)p1;
             float v2 = (float)p2;
             sumofsquared1 += (v1*v1);
@@ -377,31 +434,23 @@ float StereoDepthProjection::OneSubNCCOfPatches(Mat patch1, Mat patch2){
     return 1 - res;
 }
 
-/* This function returns a uchar Mat type converted from a given
- * raw Mat type, it also normalize the pixel value to the max_range
- */
-Mat StereoDepthProjection::NormalizeRaw(Mat raw){
-    if(!raw.data){
-        return Mat(100,100,CV_8UC1);
-    }
-    int rows = raw.rows;
-    int cols = raw.cols;
-    Mat rt(rows, cols, CV_8UC1);
-    for(int r = 0; r < rows; r++){
-        for(int c = 0; c < cols; c++){
-            float val = raw.at<float>(r,c);
-            if(val <= 0.0){
-                rt.at<uchar>(r,c) = 0;
-                continue;
-            }
-            rt.at<uchar>(r,c) = (int)((val/range_max)*256);
+void StereoDepthProjection::ConvertGray16ToGray8(Mat sixteenBit, Mat &eightBit){
+    eightBit = Mat(sixteenBit.rows, sixteenBit.cols, CV_8UC1);
+    for(int r = 0; r < sixteenBit.rows;r++){
+        for(int c = 0; c < sixteenBit.cols; c++){
+            eightBit.at<uchar>(r,c) = (uchar)(((int)sixteenBit.at<short>(r,c)) >> 8);
         }
     }
-    return rt;
-
 }
 
-bool StereoDepthProjection::GetBilinearPatch(float x, float y, int w_l, int w_r, int h_u, int h_d, Mat img,Mat& patch){
+
+/* This function takes in middle coordinates of a patch
+ * with specified width on left&right side of middle point
+ * and specified height on upper&lower side of middle point
+ * in float value getting bilinear values of a specfied window
+ */
+
+template <typename T> bool StereoDepthProjection::GetBilinearPatch(float x, float y, int w_l, int w_r, int h_u, int h_d, Mat img,Mat& patch){
     if(x - w_l < 0 || x + w_r >= img.cols - 1 || y - h_u < 0 || y + h_d >= img.rows -1){
         return false;
     }
@@ -415,16 +464,16 @@ bool StereoDepthProjection::GetBilinearPatch(float x, float y, int w_l, int w_r,
             int x2 = ((int)x_f) + 1;
             int y1 = (int)y_f;
             int y2 = ((int)y_f)+1;
-            int v11 = img.at<uchar>(y1,x1);
-            int v21 = img.at<uchar>(y1,x2);
-            int v12 = img.at<uchar>(y2,x1);
-            int v22 = img.at<uchar>(y2,x2);
+            int v11 = img.at<T>(y1,x1);
+            int v21 = img.at<T>(y1,x2);
+            int v12 = img.at<T>(y2,x1);
+            int v22 = img.at<T>(y2,x2);
             float x1_p = ((float)x2 - x_f)/(x2 - x1);
             float x2_p = ((float)x_f - x1)/(x2 - x1);
             float y1_p = ((float)y2 - y_f)/(y2 - y1);
             float y2_p = ((float)y_f - y1)/(y2 - y1);
             int v = (int)(y1_p*(x1_p*v11 + x2_p*v21) + y2_p*(x1_p*v12 + x2_p*v22));
-            patch.at<uchar>(p_y, p_x) = v;
+            patch.at<T>(p_y, p_x) = v;
             p_x = (p_x == (w_l+w_r))?0:p_x+1;
         }
         p_y++;

@@ -1,7 +1,7 @@
 #include "DFSVPlayer.h"
 
-DFSVPlayer::DFSVPlayer(String in){
-    in_path = in;
+DFSVPlayer::DFSVPlayer(){
+
 }
 
 DFSVPlayer::~DFSVPlayer(){
@@ -16,7 +16,8 @@ DFSVPlayer::~DFSVPlayer(){
  * of the video file which specify video's each frame's width,
  * height and Mat CV format
  */
-void DFSVPlayer::Open(){
+void DFSVPlayer::Open(String in){
+    in_path = in;
     in_file.open(in_path.c_str(), ifstream::binary);
     // get length of file
     in_file.seekg(0,in_file.end);

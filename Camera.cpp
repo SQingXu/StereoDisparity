@@ -1,6 +1,6 @@
 #include "Camera.h"
 
-bool Camera::readCalibration(char *filename)
+bool Camera::readCalibration(const char *filename)
 {
     ifstream cal_file;
     cal_file.open(filename);
@@ -62,6 +62,18 @@ bool Camera::readCalibration(char *filename)
     p1 = dist.at<float>(0,2);
     p2 = dist.at<float>(0,3);
     k3 = dist.at<float>(0,4);
+
+//    std::cout << "K matrix: " << std::endl;
+//    debugPrintMatrix<float>(K);
+//    std::cout << "R matrix: " << std::endl;
+//    debugPrintMatrix<float>(R);
+//    std::cout << "translation: " << std::endl;
+//    debugPrintMatrix<float>(t);
+//    std::cout << "E: " << std::endl;
+//    debugPrintMatrix<float>(E);
+//    std::cout << "DistCoeffs: " << std::endl;
+//    debugPrintMatrix<float>(dist);
+
     return true;
 }
 
@@ -168,4 +180,13 @@ bool Camera::undistortPt(Mat dis, Mat& orig)
     orig.at<float>(1,0) = orig_pts.at<Point3f>(0,0).y;
     orig.at<float>(2,0) = orig_pts.at<Point3f>(0,0).z;
     return true;
+}
+
+template <typename T>void Camera::debugPrintMatrix(Mat mat){
+    for(int r = 0; r < mat.rows; r++){
+        for(int c = 0; c < mat.cols; c++){
+            std::cout << mat.at<T>(r,c) << " ";
+        }
+        std::cout << std::endl;
+    }
 }

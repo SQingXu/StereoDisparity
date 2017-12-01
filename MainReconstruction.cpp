@@ -4,9 +4,12 @@
 
 #define WIN_NAME "Depth Output"
 
+const char* calibfile1 = "/playpen/StereoDisparity/Capture/calibrationResult1.txt";
+const char* calibfile2 = "/playpen/StereoDisparity/Capture/calibrationResult2.txt";
+const char* dfsvfile = "/playpen/StereoDisparity/Capture/capture1_recon";
+
 char filename1[] = "/playpen/StereRecording/2/CalibResult3/calib_cam1.txt";
 char filename2[] = "/playpen/StereRecording/2/CalibResult3/calib_cam2.txt";
-
 char img1[] = "/playpen/StereRecording/2/output/PointGrey1/00211.jpg";
 char img2[] = "/playpen/StereRecording/2/output/PointGrey2/00211.jpg";
 
@@ -14,8 +17,8 @@ bool subpixel = true;
 bool occlusion = true;
 bool regularize = true;
 bool savePly = true;
-bool colorPly = true;
-const char* ply_name = "/playpen/StereoDisparity/Capture/PLY/output_reg.ply";
+bool colorPly = false;
+const char* ply_name = "/playpen/StereoDisparity/Capture/PLY/output_reg_short.ply";
 CostType ct = ZNCC;
 
 const int patch_size = 11;
@@ -23,22 +26,27 @@ const int max_iteration = 64;
 const float beta = 0.1;
 const int reg_iteration = 15;
 
-const float range_min = 50;
-const float range_max = 100;
+const float range_min = 70;
+const float range_max = 120;
 
 String rtBooleanString(bool bl);
 
 int main(void)
 {
     //Set up stereo class variables and image data
-    StereoDepthProjection sdp = StereoDepthProjection();
-    sdp.ReadImagePair(img1, img2, filename1, filename2);
+    StereoDepthProjection sdp;
+    //sdp.ReadImagePair(img1, img2, filename1, filename2);
+    sdp.LoadCalibrations(calibfile1,calibfile2);
+    sdp.LoadImageDFSV(dfsvfile);
+    sdp.GetFramePairDFSV(2);
     sdp.SetStereoVariables(range_min, range_max, patch_size, max_iteration);
+//    waitKey(0);
+//    return 0;
 
     //Find depth with normalized data
     Mat depth = sdp.FindDepth(subpixel,occlusion,ct,regularize,reg_iteration,
                               beta,savePly,colorPly,ply_name);
-    Mat normal = sdp.NormalizeRaw(depth);
+    Mat normal = sdp.NormalizeRaw<uchar>(depth);
 
     namedWindow(WIN_NAME, WINDOW_AUTOSIZE);
     imshow(WIN_NAME,normal);

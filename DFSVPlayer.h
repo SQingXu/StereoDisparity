@@ -3,9 +3,9 @@
 
 class DFSVPlayer{
 public:
-    DFSVPlayer(String in);
+    DFSVPlayer();
     ~DFSVPlayer();
-    void Open();
+    void Open(String in);
     void Close();
     void GrabNextFrame(vector<StreamPacket>& sp);
 
