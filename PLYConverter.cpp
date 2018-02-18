@@ -19,11 +19,14 @@ void PLYConverter::writeDepthToPLY(const char *path, Mat depth, Mat color,Camera
     fprintf(outPly,"property float x\n");
     fprintf(outPly,"property float y\n");
     fprintf(outPly,"property float z\n");
-    if(isColor && color.channels() == 3){
+    if(isColor){
         fprintf(outPly, "property uchar red\n");
         fprintf(outPly, "property uchar green\n");
         fprintf(outPly, "property uchar blue\n");
-        cv::split(color, bgr);
+        if(color.channels() == 3){
+            cv::split(color, bgr);
+            std::cout << "split color" << std::endl;
+        }
     }
     fprintf(outPly,"element face %d\n",0);
     fprintf(outPly,"property list uchar int vertex_indices\n");
@@ -44,6 +47,9 @@ void PLYConverter::writeDepthToPLY(const char *path, Mat depth, Mat color,Camera
             if(isColor && color.channels() == 3){
                 fprintf(outPly, " %d %d %d", bgr[2].at<uchar>(r,c),
                         bgr[1].at<uchar>(r,c), bgr[0].at<uchar>(r,c));
+            }else if(isColor && color.type() == CV_16UC1){
+                uchar gray_scale = (uchar)((int)color.at<ushort>(r,c)>>8);
+                fprintf(outPly, " %d %d %d", gray_scale, gray_scale, gray_scale);
             }
             fprintf(outPly, "\n");
         }

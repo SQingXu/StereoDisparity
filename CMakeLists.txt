@@ -56,8 +56,21 @@ target_sources(FramePlayer PUBLIC FlyCapturePlayer.cpp FlyCapturePlayer.h)
 target_sources(FramePlayer PUBLIC DFSVPlayer.cpp DFSVPlayer.h)
 target_sources(FramePlayer PUBLIC Calibrator.cpp Calibrator.h)
 
+add_executable(Regularizor MainRegularization.cpp)
+target_sources(Regularizor PUBLIC Regularizer.cpp Regularizer.h)
+target_sources(Regularizor PUBLIC DFSVPlayer.cpp DFSVPlayer.h)
+target_sources(Regularizor PUBLIC Camera.cpp Camera.h)
+target_sources(Regularizor PUBLIC PLYConverter.cpp PLYConverter.h)
+
+add_executable(Projector ProjectorPattern.cpp)
+
+
+cuda_add_executable(ProjectionStereoCUDA ProjectionDepthCuda.cu ProjectionDepthCuda.h)
+
 target_link_libraries(RectifiedDisparity ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw)
 target_link_libraries(ProjectionStereo ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw)
 target_link_libraries(FrameExtracter ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw)
 target_link_libraries(FramePlayer ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw ${FlyCapture2_LIBRARY})
-
+target_link_libraries(ProjectionStereoCUDA ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw ${FlyCapture2_LIBRARY})
+target_link_libraries(Projector ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw)
+target_link_libraries(Regularizor ${OpenCV_LIBS} ${OPENGL_LIBRARIES} GLEW glfw)

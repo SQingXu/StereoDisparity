@@ -29,6 +29,7 @@ bool StereoDepthProjection::GetFramePairDFSV(unsigned int frame){
     dplayer.GrabNextFrame(streamPackets);
     img_a = streamPackets[0].image_buffer;
     img_b = streamPackets[1].image_buffer;
+    img_color = img_a;
 
 //    ConvertGray16ToGray8(streamPackets[0].image_buffer,img_a);
 //    ConvertGray16ToGray8(streamPackets[1].image_buffer,img_b);
@@ -36,6 +37,14 @@ bool StereoDepthProjection::GetFramePairDFSV(unsigned int frame){
     cv::Mat image_pair(img_a.rows, 2 * img_a.cols, dplayer.GetStreamInfo().cvfmt);
     cv::hconcat(img_a, img_b, image_pair);
     imshow("Test Image",image_pair);
+    Mat con_imagepair;
+    ConvertGray16ToGray8(image_pair, con_imagepair);
+    imwrite("image_pair.jpg",con_imagepair);
+//    Mat img1, img2;
+//    ConvertGray16ToGray8(streamPackets[0].image_buffer,img1);
+//    ConvertGray16ToGray8(streamPackets[1].image_buffer,img2);
+//    imwrite("depth_capture1.jpg",img1);
+//    imwrite("depth_capture2.jpg", img2);
     return true;
 }
 
@@ -46,6 +55,7 @@ bool StereoDepthProjection::GetFramePairDFSV(unsigned int frame){
 bool StereoDepthProjection::ReadImagePair(char *file1, char *file2, char* calib1, char* calib2){
     img_a = imread(file1, CV_LOAD_IMAGE_GRAYSCALE);
     img_b = imread(file2, CV_LOAD_IMAGE_GRAYSCALE);
+    std::cout << "Row: " << img_a.rows << " Columns: " << img_a.cols << endl;
     img_color = imread(file1);
 
     if(!img_a.data || !img_color.data){

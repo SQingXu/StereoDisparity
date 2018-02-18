@@ -34,7 +34,7 @@ bool Disparity::ReadImagePair(char *file1, char *file2){
 
 Mat Disparity::FindDisparity(bool subpixel, bool occlusion, CostType ct){
     if(!occlusion){
-        Mat raw = FindDisparityRaw(subpixel,ct,Right);
+        Mat raw = FindDisparityRaw(subpixel,ct,Left);
         return NormalizeRaw(raw);
     }
 
@@ -43,7 +43,7 @@ Mat Disparity::FindDisparity(bool subpixel, bool occlusion, CostType ct){
     Mat right_disp = FindDisparityRaw(subpixel, ct, Right);
     int rows = left_disp.rows;
     int cols = left_disp.cols;
-
+#pragma omp parallel for
     for(int r = 0; r < rows; r++){
         for(int c = 0; c < cols; c++){
            float base_disf = left_disp.at<float>(r,c);
@@ -94,12 +94,11 @@ Mat Disparity::FindDisparityRaw(bool sub_pixel, CostType ct, Direction direct){
     int range = this->max_range;
     int rows = img1.rows;
     int cols = img1.cols;
-    int x = 0;
-    int y = 0;
     int r = patch_size/2;
     Mat disparity(rows, cols, CV_32FC1);
-    for(y = 0; y < rows; y++){
-        for(x = 0; x < cols; x++){
+#pragma omp parallel for
+    for(int y = 0; y < rows; y++){
+        for(int x = 0; x < cols; x++){
             //printf("iteration %d\n", y*cols + x);
             float min_cost = INT_MAX;
             float distance = 0.0;

@@ -97,90 +97,90 @@ void print_vector(int* a){
     }
 }
 
-int main(void){
-//    int *a,*b;
-//    int *c;
-//    int *d_a, *d_b, *d_c;
-//    int size = N * sizeof(int);
+//int main(void){
+////    int *a,*b;
+////    int *c;
+////    int *d_a, *d_b, *d_c;
+////    int size = N * sizeof(int);
 
-//    cudaMalloc((void **) &d_a, size);
-//    cudaMalloc((void **) &d_b, size);
-//    cudaMalloc((void **) &d_c, size);
-    uchar* d_orig;
-    uchar* d_res, *res, * d_gres;
-    int* d_fsize;
-    int* d_sigma;
+////    cudaMalloc((void **) &d_a, size);
+////    cudaMalloc((void **) &d_b, size);
+////    cudaMalloc((void **) &d_c, size);
+//    uchar* d_orig;
+//    uchar* d_res, *res, * d_gres;
+//    int* d_fsize;
+//    int* d_sigma;
 
-    sprintf(path, "%s/%s", dir, filename);
-    Mat img = imread(path, CV_LOAD_IMAGE_GRAYSCALE);
-    if(!img.data){
-        return 1;
-    }
-    int rows = img.rows;
-    int cols = img.cols;
-    int img_dim = cols * rows;
-    printf("size is %d\n", img_dim);
+//    sprintf(path, "%s/%s", dir, filename);
+//    Mat img = imread(path, CV_LOAD_IMAGE_GRAYSCALE);
+//    if(!img.data){
+//        return 1;
+//    }
+//    int rows = img.rows;
+//    int cols = img.cols;
+//    int img_dim = cols * rows;
+//    printf("size is %d\n", img_dim);
 
-    int size = img_dim * sizeof(uchar);
-    //initialization
-    cudaMalloc((void **) &d_sigma, sizeof(int));
-    cudaMalloc((void **) &d_fsize, sizeof(int));
-    cudaMalloc((void **) &d_orig, size);
-    cudaMalloc((void **) &d_res, size);
-    cudaMalloc((void **) &d_gres, size);
-    res = (uchar*)malloc(size);
+//    int size = img_dim * sizeof(uchar);
+//    //initialization
+//    cudaMalloc((void **) &d_sigma, sizeof(int));
+//    cudaMalloc((void **) &d_fsize, sizeof(int));
+//    cudaMalloc((void **) &d_orig, size);
+//    cudaMalloc((void **) &d_res, size);
+//    cudaMalloc((void **) &d_gres, size);
+//    res = (uchar*)malloc(size);
 
-    DFS_CUDA_ASSERT(cudaMemcpy(d_fsize, &filter_size, sizeof(int), cudaMemcpyHostToDevice));
-    DFS_CUDA_ASSERT(cudaMemcpy(d_sigma, &sigma,sizeof(int),cudaMemcpyHostToDevice));
-    DFS_CUDA_ASSERT(cudaMemcpy(d_orig, img.data, size, cudaMemcpyHostToDevice));
-    //blur_filter<<<rows, cols>>>(d_orig, d_res, d_fsize);
+//    DFS_CUDA_ASSERT(cudaMemcpy(d_fsize, &filter_size, sizeof(int), cudaMemcpyHostToDevice));
+//    DFS_CUDA_ASSERT(cudaMemcpy(d_sigma, &sigma,sizeof(int),cudaMemcpyHostToDevice));
+//    DFS_CUDA_ASSERT(cudaMemcpy(d_orig, img.data, size, cudaMemcpyHostToDevice));
+//    //blur_filter<<<rows, cols>>>(d_orig, d_res, d_fsize);
 
-    gaussian_filter<<<rows,cols>>>(d_orig,d_gres,d_sigma,d_fsize);
-    edge_detector<<<rows, cols>>>(d_gres,d_res);
+//    gaussian_filter<<<rows,cols>>>(d_orig,d_gres,d_sigma,d_fsize);
+//    edge_detector<<<rows, cols>>>(d_gres,d_res);
 
-    DFS_CUDA_ASSERT(cudaPeekAtLastError());
-    DFS_CUDA_ASSERT(cudaMemcpy(res, d_res, size, cudaMemcpyDeviceToHost));
-
-    DFS_CUDA_ASSERT(cudaFree(d_fsize));
-    DFS_CUDA_ASSERT(cudaFree(d_sigma));
-    DFS_CUDA_ASSERT(cudaFree(d_gres));
-    DFS_CUDA_ASSERT(cudaFree(d_orig));
-    DFS_CUDA_ASSERT(cudaFree(d_res));
-
-
-    Mat output(rows,cols,CV_8UC1,res);
-    imwrite("Guassian3&Edges.png", output);
-    namedWindow("Original", WINDOW_AUTOSIZE );
-    imshow("Original",img);
-    namedWindow("Gaussian", WINDOW_AUTOSIZE );
-    imshow("Gaussian",output);
-    waitKey(0);
-    free(res);
-
-
-
-//    a = (int *)malloc(size);
-//    b = (int *)malloc(size);
-//    random_ints(a,N);
-//    random_ints(b,N);
-//    c = (int *)malloc(size);
-
-//    DFS_CUDA_ASSERT(cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice));
-//    DFS_CUDA_ASSERT(cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice));
-//    add_v<<<1,N>>>(d_a, d_b, d_c);
 //    DFS_CUDA_ASSERT(cudaPeekAtLastError());
-//    DFS_CUDA_ASSERT(cudaMemcpy(c, d_c, size, cudaMemcpyDeviceToHost));
+//    DFS_CUDA_ASSERT(cudaMemcpy(res, d_res, size, cudaMemcpyDeviceToHost));
 
-//    print_vector(a);
-//    print_vector(b);
-//    print_vector(c);
+//    DFS_CUDA_ASSERT(cudaFree(d_fsize));
+//    DFS_CUDA_ASSERT(cudaFree(d_sigma));
+//    DFS_CUDA_ASSERT(cudaFree(d_gres));
+//    DFS_CUDA_ASSERT(cudaFree(d_orig));
+//    DFS_CUDA_ASSERT(cudaFree(d_res));
 
-//    free(a);
-//    free(b);
-//    free(c);
-//    DFS_CUDA_ASSERT(cudaFree(d_a));
-//    DFS_CUDA_ASSERT(cudaFree(d_b));
-//    DFS_CUDA_ASSERT(cudaFree(d_c));
 
-    return 0;
-}
+//    Mat output(rows,cols,CV_8UC1,res);
+//    imwrite("Guassian3&Edges.png", output);
+//    namedWindow("Original", WINDOW_AUTOSIZE );
+//    imshow("Original",img);
+//    namedWindow("Gaussian", WINDOW_AUTOSIZE );
+//    imshow("Gaussian",output);
+//    waitKey(0);
+//    free(res);
+
+
+
+////    a = (int *)malloc(size);
+////    b = (int *)malloc(size);
+////    random_ints(a,N);
+////    random_ints(b,N);
+////    c = (int *)malloc(size);
+
+////    DFS_CUDA_ASSERT(cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice));
+////    DFS_CUDA_ASSERT(cudaMemcpy(d_b, b, size, cudaMemcpyHostToDevice));
+////    add_v<<<1,N>>>(d_a, d_b, d_c);
+////    DFS_CUDA_ASSERT(cudaPeekAtLastError());
+////    DFS_CUDA_ASSERT(cudaMemcpy(c, d_c, size, cudaMemcpyDeviceToHost));
+
+////    print_vector(a);
+////    print_vector(b);
+////    print_vector(c);
+
+////    free(a);
+////    free(b);
+////    free(c);
+////    DFS_CUDA_ASSERT(cudaFree(d_a));
+////    DFS_CUDA_ASSERT(cudaFree(d_b));
+////    DFS_CUDA_ASSERT(cudaFree(d_c));
+
+//    return 0;
+//}

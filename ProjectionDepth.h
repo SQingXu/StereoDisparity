@@ -25,6 +25,7 @@ public:
     bool LoadCalibrations(const char* calib1, const char* calib2);
     bool LoadImageDFSV(const char* file);
     bool GetFramePairDFSV(unsigned int frame);
+    Mat getImgColor(){return img_color;}
     Mat FindDepth(bool subpixel, bool occlusion, CostType ct,
                   bool regularize, bool iteration = 15, const float beta = 0.1f,
                   bool SavePly = true, bool isColor = true,

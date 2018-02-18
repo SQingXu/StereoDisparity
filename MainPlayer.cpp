@@ -20,6 +20,8 @@ enum AppMode{
 
 void ShowPairImages(vector<StreamPacket> &sp, const String win_name, size_t cv_fmt);
 
+String video_path = "/playpen/StereoDisparity/Capture/calib_2-18";
+
 /* A simple interface for either render real-time or recorded video
  * In the Record Mode:
  *   r: Start Recording
@@ -37,7 +39,7 @@ void ShowPairImages(vector<StreamPacket> &sp, const String win_name, size_t cv_f
  *      one frame if image for calibration
  *   */
 int main(int argc, char *argv[]){
-    String path = "/playpen/StereoDisparity/Capture/capture1_recon";
+    //String path = "/playpen/StereoDisparity/Capture/capture2_calib";
     char keypress;
     AppMode am;
 
@@ -78,7 +80,7 @@ int main(int argc, char *argv[]){
                 std::cout << "sense the keypressed r" << std::endl;
                 if(!record){
                     record = true;
-                    String out_path = path;
+                    String out_path = video_path;
                     //sprintf(&out_path,"%s/capture%d",out_dir, 1);
                     player.StartRecord(out_path);
                 }
@@ -102,7 +104,7 @@ int main(int argc, char *argv[]){
 
         DFSVPlayer dplayer;
         Calibrator calibrator;
-        dplayer.Open(path);
+        dplayer.Open(video_path);
         unsigned int current_frame = 0;
         unsigned int step = 1;
         unsigned int calib_index = 0;
@@ -282,9 +284,9 @@ int main(int argc, char *argv[]){
             if(keypress == 'x'){
                 if(calibration){
                     Size boardSize;
-                    boardSize.width = 7;
-                    boardSize.height = 6;
-                    calibrator.LoadCalibInfo(boardSize,4.0,path,selected_frames);
+                    boardSize.width = 6;
+                    boardSize.height = 4;
+                    calibrator.LoadCalibInfo(boardSize,2.275,video_path,selected_frames);
                     calibrator.IntrisicCalibration();
                     calibrator.StereoExtrinsicCalibration();
                     calibrator.SaveCalibration();

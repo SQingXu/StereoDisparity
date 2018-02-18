@@ -102,6 +102,11 @@ void Calibrator::IntrisicCalibration(){
             cv::hconcat(raw_images[1], raw_images[0], image_pair);
             //std::cout << raw_images[0].rows << " " << raw_images[1].cols << std::endl;
             cv::imshow("Image Preview", image_pair);
+            if(i == 0){
+                Mat img8;
+                ConvertGray16ToGray8(image_pair,img8);
+                imwrite("depth_calib.jpg", img8);
+            }
         }
     }
     std::cout << pro_image_pair << " image pairs are found proper" << std::endl;

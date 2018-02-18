@@ -17,7 +17,7 @@ enum Direction{Left, Right};
 
 class Disparity{
 public:
-    const static int patch_size = 7;
+    const static int patch_size = 11;
     const static int max_range = 64;
 
     bool ReadImagePair(char* file1, char* file2);
